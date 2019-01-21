@@ -1,0 +1,18 @@
+{
+    "name": "rain_sunshine_cloud/jwt_token",
+    "authors": [
+        {
+            "name": "RainSunshineCloud",
+            "email": "931035553@qq.com"
+        }
+    ],
+    "require": {
+    	"php": ">=5.3.0",
+        "ext-gd": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "RainSunshineCloud\\": "src/"
+        }
+    }
+}
