@@ -40,7 +40,7 @@ class JWT
 		$this->refreshTime = $is_first ? $this->startTime + $this->refresh : $this->getRefreshTime($is_first);
 
 		if ($this->refreshTime <= $_SERVER['REQUEST_TIME']) {
-			throw JWTException('encode 失败',1001);
+			throw new JWTException('encode 失败',1001);
 		}
 		$header = [
 			'type' 	=> self::$type,
