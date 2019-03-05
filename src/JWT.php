@@ -38,10 +38,6 @@ class JWT
 		$this->startTime = $_SERVER['REQUEST_TIME'];
 		$this->endTime = $this->startTime + $this->expire;
 		$this->refreshTime = $is_first ? $this->startTime + $this->refresh : $this->getRefreshTime($is_first);
-
-		if ($this->refreshTime <= $_SERVER['REQUEST_TIME']) {
-			throw new JWTException('encode 失败',1001);
-		}
 		$header = [
 			'type' 	=> self::$type,
 			'algo' 	=> self::$algo,
@@ -167,7 +163,7 @@ class JWT
 	private static function enPayload($payload)
 	{
 		if (is_array($payload) || is_object($payload)) {
-			$payload = json_encode($header);
+			$payload = json_encode($payload);
 
 			if ($payload === false) {
 				throw new JWTException('payload 加密失败',1001);
