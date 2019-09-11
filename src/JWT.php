@@ -21,13 +21,13 @@ class JWT
 	//必须记住的refreshTime
 	private $refreshTime = 0;
 
-	public function encode($payload,$private_payload = null,bool $is_first = false)
+	public function encode($payload,$private_payload = null)
 	{
 		$res = '';
 		//生成有效期
 		$this->startTime = $_SERVER['REQUEST_TIME'];
 		$this->endTime = $this->startTime + $this->expire;
-		$this->refreshTime = $is_first ? $this->startTime + $this->refresh : $this->getRefreshTime($is_first);
+		$this->refreshTime = self::$is_first ? $this->startTime + $this->refresh : $this->getRefreshTime($is_first);
 		$header = [
 			'type' 	=> self::$type,
 			'algo' 	=> self::$algo,
