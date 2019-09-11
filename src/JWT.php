@@ -3,14 +3,17 @@ namespace RainSunshineCloud;
 
 class JWT 
 {
-	private static $algo = 'sha256';
-	private static $keys = 'sdfs';
-	private static $openssl_algo = 'AES-256-CBC';
-	private static $oppenssl_key = 'sdfsdfsasdfsfsserwedsfsdfsdfewerwf';
-	private static $iv = '1q3w12121d2e4242';
-	private static $type = 'JWT';
-	private static $is_first = true;
+	private  $algo = 'sha256';
+	private  $keys = 'sdfs';
+	private  $openssl_algo = 'AES-256-CBC';
+	private  $oppenssl_key = 'sdfsdfsasdfsfsserwedsfsdfsdfewerwf';
+	private  $iv = '1q3w12121d2e4242';
+	private  $type = 'JWT';
+	private  $is_first = true;
 	private static $self_obj = null;
+	//payload
+	private  $pri_payload = [];
+	private  $payload = [];
 	//当前token有效期
 	private $expire = 300;
 	//token有效期
@@ -21,29 +24,29 @@ class JWT
 	//必须记住的refreshTime
 	private $refreshTime = 0;
 
-	public function encode($payload,$private_payload = null)
+	public function encode()
 	{
 		$res = '';
 		//生成有效期
 		$this->startTime = $_SERVER['REQUEST_TIME'];
 		$this->endTime = $this->startTime + $this->expire;
-		$this->refreshTime = self::$is_first ? $this->startTime + $this->refresh : $this->getRefreshTime($is_first);
+		$this->refreshTime = $this->is_first ? $this->startTime + $this->refresh : $this->getRefreshTime();
 		$header = [
-			'type' 	=> self::$type,
-			'algo' 	=> self::$algo,
+			'type' 	=> $this->type,
+			'algo' 	=> $this->algo,
 			'st'  	=> $this->startTime,
 			'et' 	=> $this->endTime,
 			'ft' 	=> $this->refreshTime,
 		];
 	
-		$res .= self::enHeader($header);
-		$res .= '.'.self::enPayload($payload);
+		$res .= $this->enHeader($header);
+		$res .= '.'.$this->enPayload();
 		
-		if ($private_payload){
-			$res .= '.'.self::enPrivatePayload($private_payload);
+		if ($this->pri_payload){
+			$res .= '.'.$this->enPrivatePayload();
 		}
 
-		$res .= '.'.self::enSignature($res);
+		$res .= '.'.$this->enSignature($res);
 		return str_replace(['+','/','='],['-','_',''],base64_encode($res));
 	}
 
@@ -54,8 +57,8 @@ class JWT
 	 */
 	public function decode(string $token)
 	{
-		self::$is_first = false;
-		$token = self::urlsafe_b64decode($token);
+		$this->is_first = false;
+		$token = $this->urlsafe_b64decode($token);
 
 		if ($token == false) {
 			throw new JWTException('decode 失败',1001);
@@ -65,15 +68,15 @@ class JWT
 		$count = count($res);
 
 		if ( $count == 3) {
-			$payload = self::dePayload($res[1]);
-			$sign = self::deSignature($res);
+			$payload = $this->dePayload($res[1]);
+			$sign = $this->deSignature($res);
 			$header = $this->deHeader($res[0]);
 			return $payload;
 		} else if ($count == 4) {
-			$payload = self::dePayload($res[1]);
-			$sign = self::deSignature($res);
+			$payload = $this->dePayload($res[1]);
+			$sign = $this->deSignature($res);
 			$header = $this->deHeader($res[0]);
-			$private = self::dePrivatePayload($res[2]);
+			$private = $this->dePrivatePayload($res[2]);
 			return [
 				'public' => $payload,
 				'private' => $private,
@@ -88,7 +91,7 @@ class JWT
 	 * @param  array  $header [description]
 	 * @return [type]         [description]
 	 */
-	private static function enHeader(array $header):string
+	private function enHeader(array $header):string
 	{
 		$header = json_encode($header);
 
@@ -124,11 +127,11 @@ class JWT
 			throw new JWTException('header 解密失败',1001);
 		}
 
-		if (empty($res['type']) || $res['type'] != self::$type) {
+		if (empty($res['type']) || $res['type'] != $this->type) {
 			throw new JWTException('header 解密失败',1001);
 		}
 
-		if (empty($res['type']) || $res['algo'] != self::$algo) {
+		if (empty($res['type']) || $res['algo'] != $this->algo) {
 			throw new JWTException('header 解密失败',1001);
 		}
 
@@ -151,13 +154,14 @@ class JWT
 	 * payload
 	 * @return [type] [description]
 	 */
-	private static function enPayload($payload)
+	private function enPayload()
 	{
+		$payload = $this->payload;
 		if (is_array($payload) || is_object($payload)) {
 			$payload = json_encode($payload);
 
 			if ($payload === false) {
-				throw new JWTException('payload 加密失败',1001);
+				throw new JWTException('payload 加密失败:'.json_last_error(),1001);
 			}
 		}
 
@@ -175,7 +179,7 @@ class JWT
 	 * @param  string $payload [description]
 	 * @return [type]          [description]
 	 */
-	private static function dePayload(string $payload)
+	private function dePayload(string $payload)
 	{
 		$payload = base64_decode($payload);
 
@@ -197,9 +201,9 @@ class JWT
 	 * @param  string $sign [description]
 	 * @return [type]       [description]
 	 */
-	private static function enSignature(string $sign)
+	private function enSignature(string $sign)
 	{
-		$res = \hash_hmac(self::$algo,$sign,self::$keys);
+		$res = \hash_hmac($this->algo,$sign,$this->keys);
 
 		if ($res === false) {
 			throw new JWTException('sign 加密失败',1001);
@@ -213,10 +217,10 @@ class JWT
 	 * @param  array  $token [description]
 	 * @return [type]        [description]
 	 */
-	private static function deSignature(array $token)
+	private function deSignature(array $token)
 	{
 		$sign = array_pop($token);
-		$en_sign = self::enSignature(join('.',$token));
+		$en_sign = $this->enSignature(join('.',$token));
 
 		if ($sign !== $en_sign) {
 			throw new JWTException('sign 解密失败',1001);
@@ -230,8 +234,10 @@ class JWT
 	 * @param  [type] $content [description]
 	 * @return [type]          [description]
 	 */
-	private static function enPrivatePayload($content)
+	private function enPrivatePayload()
 	{
+		$content = $this->pri_payload;
+
 		if (is_array($content) || is_object($content)) {
 			$content = json_encode($content);
 
@@ -240,7 +246,7 @@ class JWT
 			}
 		}
 		$tag = '';
-	    $content = openssl_encrypt($content,self::$openssl_algo,self::$oppenssl_key,0, self::$iv);
+	    $content = openssl_encrypt($content,$this->openssl_algo,$this->oppenssl_key,0, $this->iv);
 	    
 	    if ($content == false) {
 			throw new JWTException('private_payload 加密失败',1001);
@@ -252,9 +258,9 @@ class JWT
 	/**
 	 * 加密
 	 */
-	private static function dePrivatePayload(string $content)
+	private function dePrivatePayload(string $content)
 	{
-		$content = openssl_decrypt($content,self::$openssl_algo,self::$oppenssl_key, 0, self::$iv);
+		$content = openssl_decrypt($content,$this->openssl_algo,$this->oppenssl_key, 0, $this->iv);
 		if ($content == false) {
 			throw new JWTException('private_payload 解密失败',1001);
 		}
@@ -273,7 +279,8 @@ class JWT
 	 */
 	public static function setKeys(string $keys)
 	{
-		self::$keys = $keys;
+		$this->keys = $keys;
+		return $this;
 	}
 
 	/**
@@ -282,34 +289,38 @@ class JWT
 	 */
 	public static function setIv(string $iv)
 	{
-		self::$iv = $iv;
+		$this->iv = $iv;
+		return $this;
 	}
 
 	/**
 	 * 设置私有信息加密的秘钥
 	 * @param [type] $keys [description]
 	 */
-	public static function setSslKeys(string $keys)
+	public function setSslKeys(string $keys)
 	{
-		self::$oppenssl_key = $keys;
+		$this->oppenssl_key = $keys;
+		return $this;
 	}
 
 	/**
 	 * 设置签名加密方法
 	 * @param [type] $algo [description]
 	 */
-	public static function setAlgo(string $algo)
+	public function setAlgo(string $algo)
 	{
-		self::$algo = $algo;
+		$this->algo = $algo;
+		return $this;
 	}
 
 	/**
 	 * 这是私有信息加密方法
 	 * @param [type] $algo [description]
 	 */
-	public static function setSslAlgo(string $algo)
+	public function setSslAlgo(string $algo)
 	{
-		self::$openssl_algo = $algo;
+		$this->openssl_algo = $algo;
+		return $this;
 	}
 
 	/**
@@ -317,7 +328,7 @@ class JWT
 	 * @param  [type] $string [description]
 	 * @return [type]         [description]
 	 */
-	private static function urlsafe_b64decode(string $data) {
+	private function urlsafe_b64decode(string $data) {
 
    		$data = str_replace(array('-','_'),array('+','/'),$data);
    		$mod4 = strlen($data) % 4;
@@ -350,11 +361,46 @@ class JWT
  	public function setRefreshTime($refresh_time) 
  	{
  		$this->refreshTime = $refresh_time;
+ 		return $this;
 
  	}
 	
-	protected function __construct(){}
-	public function instance()
+	protected function __construct()
+	{
+
+	}
+
+	public function addPayload(string $key,$value)
+	{
+
+		$this->payload[$key] = $value;
+		return $this;
+	}
+
+	public function addPriPayload(string $key,$value)
+	{
+		$this->pri_payload[$key] = $value;
+		return $this;
+	}
+
+	public function setPayload($payload)
+	{
+		$this->payload = $payload;
+		return $this;
+	}
+
+	public function setPriPayload($payload)
+	{
+		$this->pri_payload= $payload;
+		return $this;
+	}
+
+
+	/**
+	 * 单例
+	 * @return [type] [description]
+	 */
+	public static function instance()
 	{
 		if (!self::$self_obj) {
 			self::$self_obj = new self();
