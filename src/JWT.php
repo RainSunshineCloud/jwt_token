@@ -9,6 +9,8 @@ class JWT
 	private static $oppenssl_key = 'sdfsdfsasdfsfsserwedsfsdfsdfewerwf';
 	private static $iv = '1q3w12121d2e4242';
 	private static $type = 'JWT';
+	private static $is_first = true;
+	private static $self_obj = null;
 	//当前token有效期
 	private $expire = 300;
 	//token有效期
@@ -18,18 +20,6 @@ class JWT
 	private $startTime = 0;
 	//必须记住的refreshTime
 	private $refreshTime = 0;
-	
-	/**
-	 * 第一次生成
-	 * @param  [type] $payload         [description]
-	 * @param  [type] $private_payload [description]
-	 * @return [type]                  [description]
-	 */
-	public static function first($payload,$private_payload = null)
-	{
-		$res = New self();
-		return $res->encode($payload,$private_payload,true);
-	}
 
 	public function encode($payload,$private_payload = null,bool $is_first = false)
 	{
@@ -64,6 +54,7 @@ class JWT
 	 */
 	public function decode(string $token)
 	{
+		self::$is_first = false;
 		$token = self::urlsafe_b64decode($token);
 
 		if ($token == false) {
@@ -361,6 +352,16 @@ class JWT
  		$this->refreshTime = $refresh_time;
 
  	}
+	
+	protected function __construct(){}
+	public function instance()
+	{
+		if (!self::$self_obj) {
+			self::$self_obj = new self();
+		}
+		
+		return self::$self_obj;
+	}
 
 }
 
